@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>TradeChart Pro</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0f14;--card:#111821;--line:#1c2530;--tx:#e6edf5;--mut:#8b97a7;--up:#16c784;--dn:#ea3943;--acc:#4f8cff;--warn:#f5a623}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.wrap{max-width:980px;margin:0 auto;padding:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.logo{font-weight:800;font-size:20px;letter-spacing:-.3px}.logo b{color:var(--up)}
+.tag{color:var(--mut);font-size:12px}
+.badge{font-size:12px;font-weight:800;padding:5px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mut);white-space:nowrap;letter-spacing:.5px}
+.badge.LIVE{color:var(--up);border-color:#16c78499;background:#16c78414}
+.badge.STALE{color:var(--warn);border-color:#f5a62399;background:#f5a62314}
+.badge.ERROR{color:var(--dn);border-color:#ea394399;background:#ea394314}
+.badge.DEMO{color:#fff;border-color:var(--warn);background:var(--warn)}
+#msg{font-size:12px;color:var(--mut);margin:-4px 0 10px;min-height:17px}
+#msg.ERROR{color:var(--dn)}#msg.STALE,#msg.DEMO{color:var(--warn)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{background:#0e141b;border:1px solid var(--line);color:var(--mut);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.search{position:relative;flex:1;min-width:150px}
+.search input{width:100%;background:#0e141b;border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:9px 12px;font-size:16px}
+#res{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#0e141b;border:1px solid var(--line);border-radius:10px;z-index:5;max-height:240px;overflow:auto;display:none}
+#res div{padding:11px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.price{font-size:28px;font-weight:800}.chg{font-weight:700;font-size:14px}
+.up{color:var(--up)}.dn{color:var(--dn)}
+#star{background:none;border:1px solid var(--line);color:var(--mut);font-size:20px;border-radius:10px;padding:2px 10px;cursor:pointer}
+#star.on{color:#f5c542}
+#main{height:340px}#rsi{height:120px;margin-top:6px}
+.lbl{font-size:11px;color:var(--mut);margin:8px 0 2px}
+.wl{display:flex;justify-content:space-between;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.wl:last-child{border:0}
+.mut{color:var(--mut);font-size:12px}
+a{color:var(--mut)}
+@media(min-width:700px){#main{height:440px}#rsi{height:150px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><div class="logo">Trade<b>Chart</b> Pro</div><div class="tag">See the Market. Understand the Trend.</div></div>
+  <span class="badge" id="badge">LOADING</span>
+</header>
+<div id="msg"></div>
+
+<div class="card">
+  <div class="row" style="margin-bottom:10px">
+    <button class="chip" data-s="BTCUSDT">BTC/USDT</button>
+    <button class="chip" data-s="ETHUSDT">ETH/USDT</button>
+    <div class="search"><input id="q" placeholder="Search symbol (SOL, XRP…)" autocomplete="off" autocapitalize="characters"><div id="res"></div></div>
+  </div>
+  <div class="row" style="justify-content:space-between">
+    <div><div class="mut" id="name">BTC/USDT</div><span class="price" id="px">–</span> <span class="chg" id="ch"></span></div>
+    <button id="star" title="Add to watchlist">★</button>
+  </div>
+  <div class="row" style="margin:10px 0" id="tfs"></div>
+  <div class="row" style="margin-bottom:6px">
+    <label class="mut"><input type="checkbox" id="tEma" checked> EMA 20/50</label>
+    <label class="mut"><input type="checkbox" id="tVol" checked> Volume</label>
+    <button class="chip" id="demoBtn" style="margin-left:auto">Try Demo Mode</button>
+  </div>
+  <div id="main"></div>
+  <div class="lbl">RSI (14)</div>
+  <div id="rsi"></div>
+  <div class="mut" style="margin-top:6px"><span style="color:#f5c542">━</span> EMA 20 &nbsp; <span style="color:#4f8cff">━</span> EMA 50</div>
+</div>
+
+<div class="card"><b>Watchlist</b><div id="wl" style="margin-top:6px"></div></div>
+
+<p class="mut" style="text-align:center">Market data: Binance public API. For information only. No trading, no orders, not financial advice.<br>Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView Lightweight Charts™</a></p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const TFS=['1m','5m','15m','1h','4h','1d'];
+const STEP={'1m':60,'5m':300,'15m':900,'1h':3600,'4h':14400,'1d':86400};
+const HOSTS=['https://data-api.binance.vision','https://api.binance.com'];
+const FALLBACK=['BTC','ETH','BNB','SOL','XRP','ADA','DOGE','AVAX','LINK','DOT','LTC','TRX','ATOM','NEAR','UNI','XLM','ETC','FIL','APT','ARB'].map(x=>x+'USDT');
+const STALE_MS=15000;
+let sym='BTCUSDT',tf='15m',candles=[],demo=false,wl=[],symbols=FALLBACK,symSource='built-in list';
+let req=0,lastOk=0,fails=0,lastErr='',retryAt=0,pollT=null,retryT=null,demoT=null;
+
+function ls(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+const okSym=s=>typeof s==='string'&&/^[A-Z0-9]{2,20}USDT$/.test(s);
+wl=(ls('tcp_wl',['BTCUSDT','ETHUSDT'])||[]).filter(okSym);
+{const s=ls('tcp_sym','BTCUSDT'),t=ls('tcp_tf','15m');if(okSym(s))sym=s;if(TFS.includes(t))tf=t}
+const pretty=s=>s.replace(/USDT$/,'')+'/USDT';
+const fmt=v=>v>=100?v.toLocaleString(undefined,{maximumFractionDigits:2}):v>=1?v.toFixed(4):v.toPrecision(4);
+
+/* ---------- Binance API (public market data only, no keys) ---------- */
+async function api(path){
+  const errs=[];
+  for(const h of HOSTS){
+    const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),8000);
+    try{
+      const r=await fetch(h+path,{signal:ctl.signal});
+      clearTimeout(t);
+      if(r.ok)return await r.json();
+      errs.push(new URL(h).hostname+': HTTP '+r.status+(r.status===451||r.status===403?' (blocked in your region)':r.status===429?' (rate limited)':''));
+    }catch(e){clearTimeout(t);errs.push(new URL(h).hostname+': '+(e.name==='AbortError'?'timed out':'network error'))}
+  }
+  throw new Error(errs.join(' | '));
+}
+const parse=k=>k.map(x=>({time:Math.floor(x[0]/1000),open:+x[1],high:+x[2],low:+x[3],close:+x[4],volume:+x[5]}));
+
+/* ---------- Charts ---------- */
+if(typeof LightweightCharts==='undefined'){
+  $('badge').textContent='ERROR';$('badge').className='badge ERROR';
+  $('msg').className='ERROR';$('msg').textContent='Chart library failed to load (cdnjs.cloudflare.com blocked or offline). Check your connection and reload.';
+  throw new Error('LightweightCharts missing');
+}
+const base={layout:{background:{color:'#111821'},textColor:'#8b97a7'},grid:{vertLines:{color:'#18212c'},horzLines:{color:'#18212c'}},rightPriceScale:{borderColor:'#1c2530'},timeScale:{borderColor:'#1c2530',timeVisible:true},autoSize:true};
+const mc=LightweightCharts.createChart($('main'),base);
+const rc=LightweightCharts.createChart($('rsi'),base);
+const cs=mc.addCandlestickSeries({upColor:'#16c784',downColor:'#ea3943',wickUpColor:'#16c784',wickDownColor:'#ea3943',borderVisible:false});
+const vs=mc.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:''});
+vs.priceScale().applyOptions({scaleMargins:{top:.8,bottom:0}});
+const e1=mc.addLineSeries({color:'#f5c542',lineWidth:2,priceLineVisible:false,lastValueVisible:false});
+const e2=mc.addLineSeries({color:'#4f8cff',lineWidth:2,priceLineVisible:false,lastValueVisible:false});
+const rs=rc.addLineSeries({color:'#b07cff',lineWidth:2,priceLineVisible:false});
+rs.createPriceLine({price:70,color:'#ea394388',lineStyle:2,lineWidth:1,axisLabelVisible:false});
+rs.createPriceLine({price:30,color:'#16c78488',lineStyle:2,lineWidth:1,axisLabelVisible:false});
+let syncing=false;
+function link(a,b){a.timeScale().subscribeVisibleLogicalRangeChange(r=>{if(syncing||!r)return;syncing=true;b.timeScale().setVisibleLogicalRange(r);syncing=false})}
+link(mc,rc);link(rc,mc);
+
+/* ---------- Indicators ---------- */
+function ema(d,n){const k=2/(n+1);let e=null;const o=[];d.forEach((c,i)=>{e=e===null?c.close:c.close*k+e*(1-k);if(i>=n-1)o.push({time:c.time,value:e})});return o}
+function rsi(d,n=14){if(d.length<=n)return[];let g=0,l=0;const o=[];for(let i=1;i<d.length;i++){const x=d[i].close-d[i-1].close,u=Math.max(x,0),v=Math.max(-x,0);if(i<=n){g+=u;l+=v;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+v)/n}if(i>=n)o.push({time:d[i].time,value:l===0?100:100-100/(1+g/l)})}return o}
+const volCol=c=>c.close>=c.open?'#16c78455':'#ea394355';
+
+function clearChart(){cs.setData([]);vs.setData([]);e1.setData([]);e2.setData([]);rs.setData([]);$('px').textContent='–';$('ch').textContent=''}
+function draw(full){
+  if(!candles.length){clearChart();return}
+  const last=candles[candles.length-1];
+  if(full){cs.setData(candles);vs.setData(candles.map(c=>({time:c.time,value:c.volume,color:volCol(c)})))}
+  else{cs.update(last);vs.update({time:last.time,value:last.volume,color:volCol(last)})}
+  const on=$('tEma').checked;
+  e1.setData(on?ema(candles,20):[]);e2.setData(on?ema(candles,50):[]);
+  rs.setData(rsi(candles));
+  $('px').textContent=fmt(last.close);
+  const first=candles[Math.max(0,candles.length-96)],p=(last.close/first.open-1)*100;
+  $('ch').textContent=(p>=0?'+':'')+p.toFixed(2)+'% (96 bars)';$('ch').className='chg '+(p>=0?'up':'dn');
+}
+
+/* ---------- Status (LIVE / STALE / ERROR / DEMO) ---------- */
+function refreshStatus(){
+  let s,m;const now=Date.now(),ago=Math.round((now-lastOk)/1000);
+  if(demo){s='DEMO';m='DEMO MODE: simulated prices, not real market data.'}
+  else if(!candles.length){
+    if(retryAt){s='ERROR';m='Can’t reach Binance. '+lastErr+' Retrying in '+Math.max(0,Math.ceil((retryAt-now)/1000))+'s…'}
+    else{s='LOADING';m='Connecting to Binance…'}
+  }
+  else if(now-lastOk>STALE_MS){s='STALE';m='Updates delayed ('+ago+'s old). '+(lastErr||'Waiting for data.')+' Retrying automatically…'}
+  else{s='LIVE';m='Live from Binance · updated '+ago+'s ago'}
+  $('badge').textContent=s;$('badge').className='badge '+s;$('msg').textContent=m;$('msg').className=s;
+}
+setInterval(refreshStatus,1000);
+
+/* ---------- Loading, polling, retry ---------- */
+function stopAll(){clearTimeout(pollT);clearTimeout(retryT);clearInterval(demoT);retryAt=0}
+async function load(){
+  const id=++req;stopAll();
+  sv('tcp_sym',sym);sv('tcp_tf',tf);
+  $('name').textContent=pretty(sym);$('star').className=wl.includes(sym)?'on':'';
+  document.querySelectorAll('[data-s]').forEach(b=>b.classList.toggle('on',b.dataset.s===sym));
+  document.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===tf));
+  $('demoBtn').textContent=demo?'Back to Live':'Try Demo Mode';
+  candles=[];clearChart();lastErr='';
+  if(demo){candles=demoData();draw(true);mc.timeScale().fitContent();demoT=setInterval(demoTick,1500);refreshStatus();renderWl();return}
+  refreshStatus();
+  try{
+    const j=await api('/api/v3/klines?symbol='+sym+'&interval='+tf+'&limit=300');
+    if(id!==req)return;
+    if(!Array.isArray(j)||!j.length)throw new Error('No data returned for '+pretty(sym)+'.');
+    candles=parse(j);lastOk=Date.now();fails=0;lastErr='';
+    draw(true);mc.timeScale().fitContent();refreshStatus();
+    pollT=setTimeout(poll,5000);renderWl();
+  }catch(e){
+    if(id!==req)return;
+    fails++;lastErr=e.message;
+    const wait=Math.min(2000*Math.pow(2,fails-1),30000);
+    retryAt=Date.now()+wait;refreshStatus();
+    retryT=setTimeout(load,wait);
+  }
+}
+async function poll(){
+  const id=req;
+  try{
+    const j=await api('/api/v3/klines?symbol='+sym+'&interval='+tf+'&limit=2');
+    if(id!==req||demo)return;
+    parse(j).forEach(k=>{const l=candles[candles.length-1];if(k.time===l.time)candles[candles.length-1]=k;else if(k.time>l.time)candles.push(k)});
+    lastOk=Date.now();fails=0;lastErr='';draw(false);
+  }catch(e){if(id!==req)return;fails++;lastErr=e.message}
+  if(id===req&&!demo)pollT=setTimeout(poll,Math.min(5000*Math.pow(2,Math.min(fails,3)),30000));
+}
+
+/* ---------- Demo mode (only when you tap the button) ---------- */
+function demoData(){
+  const step=STEP[tf],now=Math.floor(Date.now()/1000/step)*step;let seed=1;for(const ch of sym)seed=(seed*31+ch.charCodeAt(0))%2147483647;
+  const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const o=[];let p=100;
+  for(let i=299;i>=0;i--){const op=p;p=Math.max(p*(1+(rnd()-.48)*.012),1);o.push({time:now-i*step,open:op,high:Math.max(op,p)*(1+rnd()*.004),low:Math.min(op,p)*(1-rnd()*.004),close:p,volume:50+rnd()*400})}
+  return o;
+}
+function demoTick(){const c=candles[candles.length-1],n=c.close*(1+(Math.random()-.5)*.002);c.close=n;c.high=Math.max(c.high,n);c.low=Math.min(c.low,n);c.volume+=Math.random()*5;draw(false)}
+
+/* ---------- Watchlist ---------- */
+let wlT=0;
+async function renderWl(){
+  const el=$('wl'),my=++wlT;
+  if(!wl.length){el.innerHTML='<div class="mut">Tap ★ on a chart to add coins.</div>';return}
+  const row=(w,right)=>'<div class="wl" data-w="'+w+'"><b>'+pretty(w)+'</b><span>'+right+'</span></div>';
+  if(demo){el.innerHTML=wl.map(w=>row(w,'<span class="mut">demo mode</span>')).join('');bind();return}
+  el.innerHTML=wl.map(w=>row(w,'<span class="mut">loading…</span>')).join('');bind();
+  try{
+    const j=await api('/api/v3/ticker/24hr?symbols='+encodeURIComponent(JSON.stringify(wl)));
+    if(my!==wlT)return;
+    el.innerHTML=wl.map(w=>{const t=j.find(x=>x.symbol===w);if(!t)return row(w,'<span class="mut">unavailable</span>');const c=+t.priceChangePercent;return row(w,fmt(+t.lastPrice)+' <span class="'+(c>=0?'up':'dn')+'">'+(c>=0?'+':'')+c.toFixed(2)+'%</span>')}).join('');bind();
+  }catch(e){if(my!==wlT)return;el.innerHTML=wl.map(w=>row(w,'<span class="dn">prices unavailable</span>')).join('');bind()}
+}
+function bind(){document.querySelectorAll('[data-w]').forEach(d=>d.onclick=()=>{sym=d.dataset.w;load();scrollTo({top:0,behavior:'smooth'})})}
+setInterval(()=>{if(!demo&&!document.hidden)renderWl()},30000);
+
+/* ---------- Symbol search ---------- */
+async function loadSymbols(){
+  try{
+    const j=await api('/api/v3/ticker/price');
+    const l=j.map(x=>x.symbol).filter(s=>/^[A-Z0-9]+USDT$/.test(s)&&!/(UP|DOWN|BULL|BEAR)USDT$/.test(s)).sort();
+    if(l.length>20){symbols=['BTCUSDT','ETHUSDT',...l.filter(s=>s!=='BTCUSDT'&&s!=='ETHUSDT')];symSource='Binance'}
+  }catch(e){}
+}
+$('q').oninput=e=>{
+  const v=e.target.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,''),r=$('res');
+  if(!v){r.style.display='none';return}
+  const m=symbols.filter(s=>s.includes(v)).slice(0,10);
+  r.innerHTML=(m.length?m.map(s=>'<div data-c="'+s+'">'+pretty(s)+'</div>').join(''):'<div class="mut">No match ('+symSource+')</div>');
+  r.style.display='block';
+  r.querySelectorAll('[data-c]').forEach(d=>d.onclick=()=>{sym=d.dataset.c;$('q').value='';r.style.display='none';load()});
+};
+
+/* ---------- Controls ---------- */
+$('tfs').innerHTML=TFS.map(t=>'<button class="chip" data-t="'+t+'">'+t+'</button>').join('');
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tf=b.dataset.t;load()});
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{sym=b.dataset.s;load()});
+$('star').onclick=()=>{wl=wl.includes(sym)?wl.filter(x=>x!==sym):[...wl,sym];sv('tcp_wl',wl);$('star').className=wl.includes(sym)?'on':'';renderWl()};
+$('tEma').onchange=()=>draw(false);
+$('tVol').onchange=()=>vs.applyOptions({visible:$('tVol').checked});
+$('demoBtn').onclick=()=>{demo=!demo;load()};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!demo&&candles.length&&Date.now()-lastOk>STALE_MS){clearTimeout(pollT);poll()}});
+
+load();loadSymbols();
+</script>
+</body>
+</html>
